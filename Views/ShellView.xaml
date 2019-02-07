@@ -1,0 +1,67 @@
+﻿<Window 
+    x:Class="PleskEmailAliasManager.Views.ShellView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:cal="http://www.caliburnproject.org"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:conv="clr-namespace:PleskEmailAliasManager.Converter"
+    TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+    Background="{DynamicResource MaterialDesignPaper}"
+    TextElement.FontWeight="Medium"
+    TextElement.FontSize="14"
+    FontFamily="pack://application:,,,/MaterialDesignThemes.Wpf;component/Resources/Roboto/#Roboto"
+    Width="1000" Height="600"
+    IsEnabled="{Binding IsDialogVisible, Converter={conv:InverseBooleanConverter}}"
+    Title="{Binding Title}"
+    Icon="pack://application:,,,/PleskEmailAliasManager;component/plesk.ico"
+    cal:Message.Attach="[Event ContentRendered] = [Action OnDisplayed()]; [Event Closing] = [Action OnClose($eventArgs)]">
+
+    <materialDesign:DialogHost Identifier="ShellDialog" IsOpen="{Binding IsDialogVisible}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <materialDesign:Card Padding="10" Margin="10" VerticalAlignment="Stretch">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Available Domains" Style="{DynamicResource MaterialDesignTitleTextBlock}" Margin="0 0 0 5"/>
+                    <ContentControl Name="Domains" Grid.Row="1" />
+                </Grid>
+            </materialDesign:Card>
+
+            <materialDesign:Card Padding="10" Margin="10" VerticalAlignment="Stretch" Grid.Column="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Mail Address" Style="{DynamicResource MaterialDesignTitleTextBlock}" Margin="0 0 0 5"/>
+                    <ContentControl Name="Mails" Grid.Row="1" />
+                </Grid>
+            </materialDesign:Card>
+
+            <materialDesign:Card Padding="10" Margin="10" VerticalAlignment="Stretch" Grid.Column="2">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="auto"/>
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Aliases" Style="{DynamicResource MaterialDesignTitleTextBlock}" Margin="0 0 0 5"/>
+                    <ContentControl Name="Aliases" Grid.Row="1" />
+                </Grid>
+            </materialDesign:Card>
+
+            <materialDesign:Snackbar Name="MainSnackbar" Grid.ColumnSpan="3" MessageQueue="{Binding SnackbarMessageQueue}" />
+        </Grid>
+    </materialDesign:DialogHost>
+</Window>
