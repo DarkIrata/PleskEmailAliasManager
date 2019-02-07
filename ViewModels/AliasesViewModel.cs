@@ -40,7 +40,11 @@ namespace PleskEmailAliasManager.ViewModels
         public MailData ActiveMailData
         {
             get => this.activeMailData;
-            set => this.Set(ref this.activeMailData, value, nameof(this.ActiveMailData));
+            set
+            {
+                this.Set(ref this.activeMailData, value, nameof(this.ActiveMailData));
+                this.NotifyOfPropertyChange(nameof(this.CanRequestAddAlias));
+            }
         }
 
         private string newAliasName;
@@ -48,7 +52,11 @@ namespace PleskEmailAliasManager.ViewModels
         public string NewAliasName
         {
             get => this.newAliasName;
-            set => this.Set(ref this.newAliasName, value, nameof(this.NewAliasName));
+            set
+            {
+                this.Set(ref this.newAliasName, value, nameof(this.NewAliasName));
+                this.NotifyOfPropertyChange(nameof(this.CanRequestAddAlias));
+            }
         }
 
         public AliasesViewModel(IEventAggregator eventAggregator, PleskXMLApiService pleskXMLApiService, ISnackbarMessageQueue snackbarMessageQueue)
@@ -79,7 +87,7 @@ namespace PleskEmailAliasManager.ViewModels
             DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new YesNoDialogViewModel($"Delete the alias '{alias}'?")), "ShellDialog", this.DeleteYesNoDialogClosedAsync);
         }
 
-        public bool CanRequestAddAlias() => this.ActiveMailData != null;
+        public bool CanRequestAddAlias => this.ActiveMailData != null && !string.IsNullOrEmpty(this.NewAliasName);
 
         public void RequestAddAlias()
         {
