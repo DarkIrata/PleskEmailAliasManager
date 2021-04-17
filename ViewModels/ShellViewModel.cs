@@ -1,8 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Text;
-using System.Windows;
-using System.Windows.Input;
 using System.Xml.Serialization;
 using Caliburn.Micro;
 using MaterialDesignThemes.Wpf;
@@ -15,6 +12,7 @@ namespace PleskEmailAliasManager.ViewModels
     public class ShellViewModel : PropertyChangedBase
     {
         private const string LoginDataFile = "login.xml";
+        public const string ShellDialogName = "ShellDialog";
 
         private readonly IEventAggregator eventAggregator;
         private readonly LoginDetails loginDetails = new LoginDetails();
@@ -83,7 +81,7 @@ namespace PleskEmailAliasManager.ViewModels
         public void OnDisplayed()
         {
             this.IsDialogVisible = false;
-            DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new LoginViewModel(this.loginDetails)), "ShellDialog", this.DialogClosed);
+            DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new LoginViewModel(this.loginDetails)), ShellViewModel.ShellDialogName, this.DialogClosed);
         }
 
         public void OnClose(object eventArgs)

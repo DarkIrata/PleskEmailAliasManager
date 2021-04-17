@@ -77,12 +77,12 @@ namespace PleskEmailAliasManager.ViewModels
         {
             if (this.ActiveMailData.DomainData == null)
             {
-                DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(PackIconKind.WarningOutline, "Missing Domain data")), "ShellDialog", this.InfoDialogClosed);
+                DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(PackIconKind.WarningOutline, "Missing Domain data")), ShellViewModel.ShellDialogName, this.InfoDialogClosed);
                 return;
             }
 
             this.SelectedAlias = alias;
-            DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new YesNoDialogViewModel($"Delete the alias '{alias}'?")), "ShellDialog", this.DeleteYesNoDialogClosedAsync);
+            DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new YesNoDialogViewModel($"Delete the alias '{alias}'?")), ShellViewModel.ShellDialogName, this.DeleteYesNoDialogClosedAsync);
         }
 
         public bool CanRequestAddAlias => this.ActiveMailData != null && !string.IsNullOrEmpty(this.NewAliasName);
@@ -91,11 +91,11 @@ namespace PleskEmailAliasManager.ViewModels
         {
             if (string.IsNullOrEmpty(this.NewAliasName))
             {
-                DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(PackIconKind.WarningOutline, "Missing new Alias name")), "ShellDialog", this.InfoDialogClosed);
+                DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(PackIconKind.WarningOutline, "Missing new Alias name")), ShellViewModel.ShellDialogName, this.InfoDialogClosed);
                 return;
             }
 
-            DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new YesNoDialogViewModel($"Create the new alias '{this.NewAliasName}@{this.ActiveMailData.DomainData.Name}'?")), "ShellDialog", this.AddYesNoDialogClosedAsync);
+            DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new YesNoDialogViewModel($"Create the new alias '{this.NewAliasName}@{this.ActiveMailData.DomainData.Name}'?")), ShellViewModel.ShellDialogName, this.AddYesNoDialogClosedAsync);
         }
 
         public async Task AddAlias(string alias)
@@ -183,7 +183,7 @@ namespace PleskEmailAliasManager.ViewModels
             }
 
             var uiElement = Application.Current.Dispatcher.Invoke(() => CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(icon, msg)));
-            await Application.Current.Dispatcher.InvokeAsync(() => DialogHost.Show(uiElement, "ShellDialog", this.InfoDialogClosed));
+            await Application.Current.Dispatcher.InvokeAsync(() => DialogHost.Show(uiElement, ShellViewModel.ShellDialogName, this.InfoDialogClosed));
         }
 
         public void InfoDialogClosed(object sender, DialogClosingEventArgs eventArgs)
