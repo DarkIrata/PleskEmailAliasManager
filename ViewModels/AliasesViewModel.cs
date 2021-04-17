@@ -220,8 +220,6 @@ namespace PleskEmailAliasManager.ViewModels
             {
                 this.Aliases.Add(alias);
             }
-
-            this.snackbarMessageQueue.Enqueue($"Got Message {message.DomainData.Name}");
         }
     }
 }
