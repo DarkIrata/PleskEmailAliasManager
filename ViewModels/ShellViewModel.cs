@@ -1,9 +1,12 @@
 ﻿using System;
 using System.IO;
+using System.Reflection;
 using System.Xml.Serialization;
 using Caliburn.Micro;
 using MaterialDesignThemes.Wpf;
+using PleskEmailAliasManager.Data;
 using PleskEmailAliasManager.Models;
+using PleskEmailAliasManager.Models.PleskXMLApi;
 using PleskEmailAliasManager.Services;
 using PleskEmailAliasManager.Utilities;
 
@@ -19,7 +22,7 @@ namespace PleskEmailAliasManager.ViewModels
         private readonly XmlSerializer serializer = new XmlSerializer(typeof(LoginDetails));
         private PleskXMLApiService apiService;
 
-        public string Title => "PLESK E-Mail Alias Manager";
+        public string Title => "PLESK E-Mail Alias Manager - " + Assembly.GetExecutingAssembly().GetName().Version;
 
         private bool isDialogVisible = true;
 
@@ -81,7 +84,7 @@ namespace PleskEmailAliasManager.ViewModels
         public void OnDisplayed()
         {
             this.IsDialogVisible = false;
-            DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new LoginViewModel(this.loginDetails)), ShellViewModel.ShellDialogName, this.DialogClosed);
+            DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new LoginViewModel(this.loginDetails)), ShellDialogName, this.LoginDialogClosed);
         }
 
         public void OnClose(object eventArgs)
@@ -102,13 +105,44 @@ namespace PleskEmailAliasManager.ViewModels
             }
         }
 
-        private void DialogClosed(object sender, DialogClosingEventArgs eventArgs)
+        private void LoginDialogClosed(object sender, DialogClosingEventArgs eventArgs)
         {
             this.apiService = new PleskXMLApiService(this.loginDetails);
+
+            var packet = new Packet()
+            {
+                Customer = Customer.CreateMinimumGet(),
+            };
+
+            //var meResponse = this.apiService.RequestAsync(packet).GetAwaiter().GetResult();
+            (ErrorResult ErrorResult, Packet Packet) meResponse = (new ErrorResult(ErrorCode.ExternalError, "aaaaaa"), null);
+            if (meResponse.ErrorResult.ErrorCode != Data.ErrorCode.Success ||
+                meResponse.Packet?.Customer?.Get?.Result == null ||
+                meResponse.Packet.Customer.Get.Result.Count == 0 ||
+                meResponse.Packet.Customer.Get.Result[0].Status != "ok")
+            {
+                var errorMsg = "Something went wrong while testing credentials..";
+                if (meResponse.Packet?.System != null)
+                {
+                    errorMsg = $"{meResponse.Packet.System.ErrorCode} - {meResponse.Packet.System.ErrorText}";
+                }
+
+                eventArgs.Cancel();
+                this.IsDialogVisible = false;
+                DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(PackIconKind.ErrorOutline, errorMsg)), ShellDialogName, this.LoginErrorInfoDialogClosed);
+                return;
+            }
 
             this.Domains = new DomainsViewModel(this.eventAggregator, this.apiService);
             this.Mails = new MailsViewModel(this.eventAggregator, this.apiService);
             this.Aliases = new AliasesViewModel(this.eventAggregator, this.apiService, this.snackbarMessageQueue);
+        }
+
+        private void LoginErrorInfoDialogClosed(object sender, DialogClosingEventArgs eventArgs)
+        {
+            eventArgs.Cancel();
+            this.IsDialogVisible = false;
+            this.OnDisplayed();
         }
     }
 }

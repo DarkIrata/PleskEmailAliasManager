@@ -88,6 +88,7 @@
     <Compile Include="Models\MailData.cs" />
     <Compile Include="Models\PleskXMLApi\Add.cs" />
     <Compile Include="Models\PleskXMLApi\Aliases.cs" />
+    <Compile Include="Models\PleskXMLApi\Customer.cs" />
     <Compile Include="Models\PleskXMLApi\Data.cs" />
     <Compile Include="Models\PleskXMLApi\Dataset.cs" />
     <Compile Include="Models\PleskXMLApi\Filter.cs" />
@@ -100,6 +101,7 @@
     <Compile Include="Models\PleskXMLApi\Result.cs" />
     <Compile Include="Models\PleskXMLApi\Site.cs" />
     <Compile Include="Models\PleskXMLApi\Packet.cs" />
+    <Compile Include="Models\PleskXMLApi\System.cs" />
     <Compile Include="Models\PleskXMLApi\Update.cs" />
     <Compile Include="Models\PleskXMLApi\Webspace.cs" />
     <Compile Include="Services\PleskXMLApiService.cs" />

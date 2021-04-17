@@ -27,7 +27,6 @@ namespace PleskEmailAliasManager.Services
             this.client.DefaultRequestHeaders.Add("HTTP_AUTH_PASSWD", this.loginDetails.Password);
         }
 
-
         public async Task<(ErrorResult ErrorResult, Packet Packet)> RequestAsync(Packet packet)
         {
             var packetData = packet.Serialize();

@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 
@@ -16,6 +15,9 @@ namespace PleskEmailAliasManager.Models.PleskXMLApi
             OmitXmlDeclaration = true
         };
 
+        [XmlElement("customer")]
+        public Customer Customer { get; set; }
+
         [XmlElement("site")]
         public Site Site { get; set; }
 
@@ -24,6 +26,9 @@ namespace PleskEmailAliasManager.Models.PleskXMLApi
 
         [XmlElement("mail")]
         public Mail Mail { get; set; }
+
+        [XmlElement("system")]
+        public System System { get; set; }
 
         [XmlIgnore]
         public string RawPacket { get; private set; }

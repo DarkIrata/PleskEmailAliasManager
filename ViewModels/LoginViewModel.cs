@@ -67,7 +67,7 @@ namespace PleskEmailAliasManager.ViewModels
             }
         }
 
-        public bool CanLogin => !string.IsNullOrEmpty(this.Server) && !string.IsNullOrEmpty(this.Username);
+        public bool CanLogin => !string.IsNullOrEmpty(this.Server) && !string.IsNullOrEmpty(this.Username) && !string.IsNullOrEmpty(this.Password);
 
         public string Error => null;
 
