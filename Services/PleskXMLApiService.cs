@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Linq;
-using System.Xml.Serialization;
+using PleskEmailAliasManager.Data;
 using PleskEmailAliasManager.Models;
 using PleskEmailAliasManager.Models.PleskXMLApi;
 
@@ -34,13 +28,22 @@ namespace PleskEmailAliasManager.Services
         }
 
 
-        public async Task<Packet> RequestAsync(Packet packet)
+        public async Task<(ErrorResult ErrorResult, Packet Packet)> RequestAsync(Packet packet)
         {
-            //var content = new Content
-            var postResponse = await this.client.PostAsync(this.ApiUrl, new StringContent(packet.Serialize())).ConfigureAwait(false);
-            var rawResponse = await postResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var packetData = packet.Serialize();
+            var content = new StringContent(packetData);
 
-            return Packet.Deserialize(rawResponse);
+            try
+            {
+                var postResponse = await this.client.PostAsync(this.ApiUrl, content).ConfigureAwait(false);
+                var rawResponse = await postResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                return (ErrorResult.Success(), Packet.Deserialize(rawResponse));
+            }
+            catch (Exception ex)
+            {
+                return (new ErrorResult(ErrorCode.InternalError, ex.Message, ex), null);
+            }
         }
     }
 }

@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Windows.Controls;
 using Caliburn.Micro;
 using MaterialDesignThemes.Wpf;
 using PleskEmailAliasManager.Models;
-using PleskEmailAliasManager.Models.PleskXMLApi;
 
 namespace PleskEmailAliasManager.ViewModels
 {
@@ -54,6 +51,8 @@ namespace PleskEmailAliasManager.ViewModels
                 }
             }
         }
+
+        public bool Test => true;
 
         public bool SaveLoginDetails
         {

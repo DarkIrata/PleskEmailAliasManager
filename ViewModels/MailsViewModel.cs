@@ -58,14 +58,20 @@ namespace PleskEmailAliasManager.ViewModels
             var response = await this.pleskXMLApiService.RequestAsync(packet).ConfigureAwait(false);
 
             this.Mails.Clear();
-            foreach (var mailAddress in response.Mail.GetInfo.Result)
-            {
-                if (mailAddress.MailName == null)
-                {
-                    continue;
-                }
 
-                this.Mails.Add(new MailData((int)mailAddress.MailName.Id, mailAddress.MailName.Name, mailAddress.MailName.Aliases, domainData));
+            if (response.ErrorResult.ErrorCode == Data.ErrorCode.Success &&
+                response.Packet.Mail != null &&
+                response.Packet.Mail.GetInfo != null)
+            {
+                foreach (var mailAddress in response.Packet.Mail.GetInfo.Result)
+                {
+                    if (mailAddress.MailName == null)
+                    {
+                        continue;
+                    }
+
+                    this.Mails.Add(new MailData((int)mailAddress.MailName.Id, mailAddress.MailName.Name, mailAddress.MailName.Aliases, domainData));
+                }
             }
         }
 

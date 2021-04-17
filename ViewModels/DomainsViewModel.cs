@@ -62,14 +62,26 @@ namespace PleskEmailAliasManager.ViewModels
 
             var response = await this.pleskXMLApiService.RequestAsync(packet).ConfigureAwait(false);
 
-            foreach (var webspace in response.Webspace.Get.Result)
-            {
-                this.Domains.Add(new DomainData(webspace.Id, webspace.Data?.GenInfo?.Name ?? unkownDomain));
-            }
+            this.Domains.Clear();
 
-            foreach (var site in response.Site.Get.Result)
+            if (response.ErrorResult.ErrorCode == Data.ErrorCode.Success && response.Packet != null)
             {
-                this.Domains.Add(new DomainData(site.Id, site.Data?.GenInfo?.Name ?? unkownDomain));
+                if (response.Packet.Webspace != null)
+                {
+                    foreach (var webspace in response.Packet.Webspace.Get.Result)
+                    {
+                        this.Domains.Add(new DomainData(webspace.Id, webspace.Data?.GenInfo?.Name ?? unkownDomain));
+                    }
+                }
+
+                if (response.Packet.Site != null)
+                {
+
+                    foreach (var site in response.Packet.Site.Get.Result)
+                    {
+                        this.Domains.Add(new DomainData(site.Id, site.Data?.GenInfo?.Name ?? unkownDomain));
+                    }
+                }
             }
         }
     }

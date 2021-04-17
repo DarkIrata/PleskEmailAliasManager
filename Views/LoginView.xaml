@@ -48,7 +48,7 @@
 
         <Grid Grid.Row="4" Margin="0 16 0 0" Grid.ColumnSpan="2">
             <Button Name="Login"  Content="LOGIN" IsDefault="True" Style="{DynamicResource MaterialDesignFlatButton}" HorizontalAlignment="Left"/>
-            <CheckBox Name="SaveLoginDetails" Content="Save Login" VerticalAlignment="Center" HorizontalAlignment="Right" />
+            <CheckBox Name="SaveLoginDetails" Content="Save Login" HorizontalAlignment="Right" />
         </Grid>
     </Grid>
 </UserControl>

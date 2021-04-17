@@ -2,22 +2,20 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
-using System.Windows.Threading;
 using Caliburn.Micro;
 using MaterialDesignThemes.Wpf;
+using PleskEmailAliasManager.Data;
 using PleskEmailAliasManager.Models;
 using PleskEmailAliasManager.Models.PleskXMLApi;
 using PleskEmailAliasManager.Services;
 using PleskEmailAliasManager.Utilities;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace PleskEmailAliasManager.ViewModels
 {
-    public class AliasesViewModel : PropertyChangedBase, 
+    public class AliasesViewModel : PropertyChangedBase,
         IHandle<MailData>
     {
         private readonly IEventAggregator eventAggregator;
@@ -114,36 +112,17 @@ namespace PleskEmailAliasManager.ViewModels
             };
             packet.Mail.Update.Add.Filter.MailName.Aliases = new List<string>() { alias };
 
-            var result = await this.pleskXMLApiService.RequestAsync(packet).ConfigureAwait(false);
-            var addResult = result?.Mail?.Update?.Add?.Result?.FirstOrDefault();
+            var response = await this.pleskXMLApiService.RequestAsync(packet).ConfigureAwait(false);
+            var addResult = response.Packet?.Mail?.Update?.Add?.Result?.FirstOrDefault();
 
-            var msg = "something is fishy..";
-            var icon = PackIconKind.Fish;
-            if (addResult == null)
+            var successMessage = $"Success! The alias '{alias}@{this.ActiveMailData.DomainData.Name}' was added!";
+            void successAction()
             {
-                msg = $"Error - Missing result from request";
-                icon = PackIconKind.ErrorOutline;
-            }
-            else if (addResult.Status.ToLower() == "error")
-            {
-                msg = $"Error - {addResult.ErrorCode}{Environment.NewLine}{addResult.ErrorText}";
-                icon = PackIconKind.ErrorOutline;
-            }
-            else if (addResult.Status.ToLower() != "ok")
-            {
-                msg = $"Error - Unkown status '{addResult.Status}'{Environment.NewLine}{addResult.ErrorText}";
-                icon = PackIconKind.WarningOutline;
-            }
-            else if (addResult.Status.ToLower() == "ok")
-            {
-                msg = $"Success! The alias '{alias}@{this.ActiveMailData.DomainData.Name}' was added!";
-                icon = PackIconKind.CheckCircleOutline;
                 this.Aliases.Add(alias);
                 this.NewAliasName = string.Empty;
             }
 
-            var uiElement = System.Windows.Application.Current.Dispatcher.Invoke<UIElement>(() => CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(icon, msg)));
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => DialogHost.Show(uiElement, "ShellDialog", this.InfoDialogClosed));
+            await this.HandleResult(response.ErrorResult, addResult, successMessage, successAction);
         }
 
         public async Task DeleteAlias(string alias)
@@ -158,37 +137,53 @@ namespace PleskEmailAliasManager.ViewModels
                     }
                 }
             };
+
             packet.Mail.Update.Remove.Filter.MailName.Aliases = new List<string>() { alias };
 
-            var result = await this.pleskXMLApiService.RequestAsync(packet).ConfigureAwait(false);
-            var removeResult = result?.Mail?.Update?.Remove?.Result?.FirstOrDefault();
+            var response = await this.pleskXMLApiService.RequestAsync(packet).ConfigureAwait(false);
+            var removeResult = response.Packet?.Mail?.Update?.Remove?.Result?.FirstOrDefault();
 
+            var successMessage = $"Success! The alias '{alias}' was removed!";
+            await this.HandleResult(response.ErrorResult, removeResult, successMessage, () => this.Aliases.Remove(alias));
+
+        }
+
+        private async Task HandleResult(ErrorResult errorResult, Result result, string successMessage, System.Action successAction)
+        {
             var msg = "something is fishy..";
             var icon = PackIconKind.Fish;
-            if (removeResult == null)
+            if (errorResult.ErrorCode == Data.ErrorCode.Success)
             {
-                msg = $"Error - Missing result from request";
+                if (result == null)
+                {
+                    msg = $"Error - Missing result from request";
+                    icon = PackIconKind.ErrorOutline;
+                }
+                else if (result.Status.ToLower() == "error")
+                {
+                    msg = $"Error - {result.ErrorCode}{Environment.NewLine}{result.ErrorText}";
+                    icon = PackIconKind.ErrorOutline;
+                }
+                else if (result.Status.ToLower() != "ok")
+                {
+                    msg = $"Error - Unkown status '{result.Status}'{Environment.NewLine}{result.ErrorText}";
+                    icon = PackIconKind.WarningOutline;
+                }
+                else if (result.Status.ToLower() == "ok")
+                {
+                    msg = successMessage;
+                    icon = PackIconKind.CheckCircleOutline;
+                    successAction();
+                }
+            }
+            else
+            {
+                msg = $"Internal Error - {errorResult.Message ?? string.Empty}";
                 icon = PackIconKind.ErrorOutline;
-            }
-            else if (removeResult.Status.ToLower() == "error")
-            {
-                msg = $"Error - {removeResult.ErrorCode}{Environment.NewLine}{removeResult.ErrorText}";
-                icon = PackIconKind.ErrorOutline;
-            }
-            else if (removeResult.Status.ToLower() != "ok")
-            {
-                msg = $"Error - Unkown status '{removeResult.Status}'{Environment.NewLine}{removeResult.ErrorText}";
-                icon = PackIconKind.WarningOutline;
-            }
-            else if (removeResult.Status.ToLower() == "ok")
-            {
-                msg = $"Success! The alias '{alias}' was removed!";
-                icon = PackIconKind.CheckCircleOutline;
-                this.Aliases.Remove(alias);
             }
 
-            var uiElement = System.Windows.Application.Current.Dispatcher.Invoke<UIElement>(() => CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(icon, msg)));
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => DialogHost.Show(uiElement, "ShellDialog", this.InfoDialogClosed));
+            var uiElement = Application.Current.Dispatcher.Invoke(() => CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(icon, msg)));
+            await Application.Current.Dispatcher.InvokeAsync(() => DialogHost.Show(uiElement, "ShellDialog", this.InfoDialogClosed));
         }
 
         public void InfoDialogClosed(object sender, DialogClosingEventArgs eventArgs)

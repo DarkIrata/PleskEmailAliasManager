@@ -81,6 +81,8 @@
     </ApplicationDefinition>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Converter\InverseBooleanConverter.cs" />
+    <Compile Include="Data\ErrorResult.cs" />
+    <Compile Include="Data\ErrorCode.cs" />
     <Compile Include="Models\DomainData.cs" />
     <Compile Include="Models\LoginDetails.cs" />
     <Compile Include="Models\MailData.cs" />
