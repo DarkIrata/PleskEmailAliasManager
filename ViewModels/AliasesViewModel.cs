@@ -1,225 +1,138 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Data;
-using Caliburn.Micro;
+using IPUP.MVVM.Commands;
+using IPUP.MVVM.Events;
 using MaterialDesignThemes.Wpf;
 using PleskEmailAliasManager.Data;
-using PleskEmailAliasManager.Models;
-using PleskEmailAliasManager.Models.PleskXMLApi;
+using PleskEmailAliasManager.Events;
 using PleskEmailAliasManager.Services;
-using PleskEmailAliasManager.Utilities;
 
 namespace PleskEmailAliasManager.ViewModels
 {
-    public class AliasesViewModel : PropertyChangedBase,
-        IHandle<MailData>
+    internal class AliasesViewModel : ListEventViewModelBase<AliasViewModel>
     {
-        private readonly IEventAggregator eventAggregator;
-        private readonly PleskXMLApiService pleskXMLApiService;
-        private readonly ISnackbarMessageQueue snackbarMessageQueue;
-        private readonly object aliasLock = new object();
+        private readonly PleskMailManager pleskManager;
 
-        public ObservableCollection<string> Aliases { get; }
+        private MailData? selectedMail;
 
-        private string selectedAlias;
-
-        public string SelectedAlias
+        public MailData? SelectedMail
         {
-            get => this.selectedAlias;
-            set => this.Set(ref this.selectedAlias, value, nameof(this.SelectedAlias));
+            get => this.selectedMail;
+            set => this.Set(ref this.selectedMail, value, nameof(this.SelectedMail));
         }
 
-        private MailData activeMailData;
+        public DelegateCommandBase AddAliasCommand { get; }
 
-        public MailData ActiveMailData
+        public bool ListEmpty => this.Items.Count == 0 && this.SelectedMail != null;
+
+        public AliasesViewModel(IEventAggregator eventAggregator, PleskMailManager pleskManager)
+            : base(eventAggregator)
         {
-            get => this.activeMailData;
-            set
+            this.pleskManager = pleskManager;
+
+            this.EventAggregator.Subscribe<SelectedMailChangedEvent>(this.OnSelectedMailChanged);
+            this.EventAggregator.Subscribe<AliasDeletedEvent>(this.OnAliasDeleted);
+
+            this.AddAliasCommand = new DelegateCommand(async () => await this.ExecuteAddAlias(), () => !string.IsNullOrEmpty(this.FilterText));
+        }
+
+        private async Task ExecuteAddAlias()
+        {
+            var alias = this.FilterText;
+            if (string.IsNullOrEmpty(alias) || this.SelectedMail == null)
             {
-                this.Set(ref this.activeMailData, value, nameof(this.ActiveMailData));
-                this.NotifyOfPropertyChange(nameof(this.CanRequestAddAlias));
-            }
-        }
-
-        private string newAliasName;
-
-        public string NewAliasName
-        {
-            get => this.newAliasName;
-            set
-            {
-                this.Set(ref this.newAliasName, value, nameof(this.NewAliasName));
-                this.NotifyOfPropertyChange(nameof(this.CanRequestAddAlias));
-            }
-        }
-
-        public AliasesViewModel(IEventAggregator eventAggregator, PleskXMLApiService pleskXMLApiService, ISnackbarMessageQueue snackbarMessageQueue)
-        {
-            this.eventAggregator = eventAggregator ??
-                    throw new ArgumentNullException(nameof(eventAggregator));
-
-            this.pleskXMLApiService = pleskXMLApiService ??
-                    throw new ArgumentNullException(nameof(pleskXMLApiService));
-
-            this.snackbarMessageQueue = snackbarMessageQueue ??
-                    throw new ArgumentNullException(nameof(snackbarMessageQueue));
-
-            this.eventAggregator.Subscribe(this);
-            this.Aliases = new ObservableCollection<string>();
-            BindingOperations.EnableCollectionSynchronization(this.Aliases, this.aliasLock);
-        }
-
-        public void RequestDeleteAlias(string alias)
-        {
-            if (this.ActiveMailData.DomainData == null)
-            {
-                DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(PackIconKind.WarningOutline, "Missing Domain data")), ShellViewModel.ShellDialogName, this.InfoDialogClosed);
                 return;
             }
 
-            this.SelectedAlias = alias;
-            DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new YesNoDialogViewModel($"Delete the alias '{alias}'?")), ShellViewModel.ShellDialogName, this.DeleteYesNoDialogClosedAsync);
-        }
-
-        public bool CanRequestAddAlias => this.ActiveMailData != null && !string.IsNullOrEmpty(this.NewAliasName);
-
-        public void RequestAddAlias()
-        {
-            if (string.IsNullOrEmpty(this.NewAliasName))
+            var results = await this.pleskManager.AddAlias(this.SelectedMail!, alias!);
+            if (results.ErrorResult.Successfully)
             {
-                DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(PackIconKind.WarningOutline, "Missing new Alias name")), ShellViewModel.ShellDialogName, this.InfoDialogClosed);
-                return;
-            }
-
-            DialogHost.Show(CaliWPFUtilities.GetBindedUIElement(new YesNoDialogViewModel($"Create the new alias '{this.NewAliasName}@{this.ActiveMailData.DomainData.Name}'?")), ShellViewModel.ShellDialogName, this.AddYesNoDialogClosedAsync);
-        }
-
-        public async Task AddAlias(string alias)
-        {
-            var packet = new Packet()
-            {
-                Mail = new Mail()
+                if (this.SelectedMail.Aliases == null)
                 {
-                    Update = new Update()
-                    {
-                        Add = new Add(this.ActiveMailData.DomainData.Id, this.ActiveMailData.Name)
-                    }
+                    this.SelectedMail.Aliases = new List<string>();
                 }
-            };
-            packet.Mail.Update.Add.Filter.MailName.Aliases = new List<string>() { alias };
 
-            var response = await this.pleskXMLApiService.RequestAsync(packet).ConfigureAwait(false);
-            var addResult = response.Packet?.Mail?.Update?.Add?.Result?.FirstOrDefault();
+                this.SelectedMail.Aliases!.Add(alias);
+                await this.ReloadItems();
+                await this.RefreshControls();
 
-            var successMessage = $"Success! The alias '{alias}@{this.ActiveMailData.DomainData.Name}' was added!";
-            void successAction()
-            {
-                this.Aliases.Add(alias);
-                this.NewAliasName = string.Empty;
-            }
-
-            await this.HandleResult(response.ErrorResult, addResult, successMessage, successAction);
-        }
-
-        public async Task DeleteAlias(string alias)
-        {
-            var packet = new Packet()
-            {
-                Mail = new Mail()
-                {
-                    Update = new Update()
-                    {
-                        Remove = new Remove(this.ActiveMailData.DomainData.Id, this.ActiveMailData.Name)
-                    }
-                }
-            };
-
-            packet.Mail.Update.Remove.Filter.MailName.Aliases = new List<string>() { alias };
-
-            var response = await this.pleskXMLApiService.RequestAsync(packet).ConfigureAwait(false);
-            var removeResult = response.Packet?.Mail?.Update?.Remove?.Result?.FirstOrDefault();
-
-            var successMessage = $"Success! The alias '{alias}' was removed!";
-            await this.HandleResult(response.ErrorResult, removeResult, successMessage, () => this.Aliases.Remove(alias));
-
-        }
-
-        private async Task HandleResult(ErrorResult errorResult, Result result, string successMessage, System.Action successAction)
-        {
-            var msg = "something is fishy..";
-            var icon = PackIconKind.Fish;
-            if (errorResult.ErrorCode == Data.ErrorCode.Success)
-            {
-                if (result == null)
-                {
-                    msg = $"Error - Missing result from request";
-                    icon = PackIconKind.ErrorOutline;
-                }
-                else if (result.Status.ToLower() == "error")
-                {
-                    msg = $"Error - {result.ErrorCode}{Environment.NewLine}{result.ErrorText}";
-                    icon = PackIconKind.ErrorOutline;
-                }
-                else if (result.Status.ToLower() != "ok")
-                {
-                    msg = $"Error - Unkown status '{result.Status}'{Environment.NewLine}{result.ErrorText}";
-                    icon = PackIconKind.WarningOutline;
-                }
-                else if (result.Status.ToLower() == "ok")
-                {
-                    msg = successMessage;
-                    icon = PackIconKind.CheckCircleOutline;
-                    successAction();
-                }
+                this.NotifyPropertyChanged(nameof(this.ListEmpty));
             }
             else
             {
-                msg = $"Internal Error - {errorResult.Message ?? string.Empty}";
-                icon = PackIconKind.ErrorOutline;
+                await DialogHost.Show(new InfoDialogViewModel(results.ErrorResult.Message, PackIconKind.ErrorOutline), ShellViewModel.RootDialogIdentifier);
             }
-
-            var uiElement = Application.Current.Dispatcher.Invoke(() => CaliWPFUtilities.GetBindedUIElement(new InfoDialogViewModel(icon, msg)));
-            await Application.Current.Dispatcher.InvokeAsync(() => DialogHost.Show(uiElement, ShellViewModel.ShellDialogName, this.InfoDialogClosed));
         }
 
-        public void InfoDialogClosed(object sender, DialogClosingEventArgs eventArgs)
+        private void OnAliasDeleted(AliasDeletedEvent args)
         {
+            var aliasItem = this.RawItems.Where(i => i.Alias == args.Alias).FirstOrDefault();
+            if (aliasItem != null)
+            {
+                if (this.Items.Contains(aliasItem))
+                {
+                    this.Items.Remove(aliasItem);
+                }
+
+                this.RawItems.Remove(aliasItem);
+            }
+
+            this.NotifyPropertyChanged(nameof(this.ListEmpty));
         }
 
-        public async void AddYesNoDialogClosedAsync(object sender, DialogClosingEventArgs eventArgs)
+        private async void OnSelectedMailChanged(SelectedMailChangedEvent args)
         {
-            if (eventArgs.Parameter is bool create && create)
-            {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => this.AddAlias(this.NewAliasName));
-            }
+            this.SelectedMail = args.MailData;
+            await this.ReloadItems();
+            await this.RefreshControls();
+
+            this.SelectedItem = null;
+            this.FilterText = string.Empty;
         }
 
-        public async void DeleteYesNoDialogClosedAsync(object sender, DialogClosingEventArgs eventArgs)
+        internal override void OnFilterTextChanged()
         {
-            if (eventArgs.Parameter is bool delete && delete)
+            base.OnFilterTextChanged();
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => this.DeleteAlias(this.SelectedAlias));
-            }
+                this.AddAliasCommand.RaiseCanExecuteChanged();
+            });
+
+            this.NotifyPropertyChanged(nameof(this.ListEmpty));
         }
 
-        public void Handle(MailData message)
+        internal override bool CanExecuteFlipSort() => true;
+
+        internal override bool CanExecuteReload() => this.SelectedMail != null;
+
+        internal override IEnumerable<AliasViewModel> GetSortedAndFilteredItems()
         {
-            this.Aliases.Clear();
-            if (message.Id == -1 && string.IsNullOrEmpty(message.Name) && string.IsNullOrEmpty(message.DomainData?.Name))
+            var filteredItems = this.RawItems.Where(i => i.Alias.Contains(this.FilterText!));
+            if (!this.SortAscending)
             {
-                this.ActiveMailData = null;
-                return;
+                return filteredItems.OrderByDescending(i => i);
             }
 
-            this.ActiveMailData = message;
-            foreach (var alias in message.Aliases)
-            {
-                this.Aliases.Add(alias);
-            }
+            return filteredItems.OrderBy(i => i);
         }
+
+        internal override async Task ExecuteReload()
+        {
+            await this.EventAggregator.PublishAsync(new RefreshAndReselectMailEvent(this.SelectedMail!));
+            await base.ExecuteReload();
+
+            this.NotifyPropertyChanged(nameof(this.ListEmpty));
+        }
+
+        internal override Task<(ErrorResult Result, List<AliasViewModel> Items)> RequestItems()
+            => Task.FromResult((ErrorResult.Success, this.SelectedMail?.Aliases?.Select(a => new AliasViewModel(
+                this.EventAggregator,
+                this.pleskManager,
+                this.SelectedMail,
+                a)).ToList() ?? new List<AliasViewModel>()));
     }
 }

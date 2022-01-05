@@ -16,11 +16,11 @@ using System.Windows.Shapes;
 namespace PleskEmailAliasManager.Views
 {
     /// <summary>
-    /// Interaction logic for InfoDialogView.xaml
+    /// Interaction logic for AliasView.xaml
     /// </summary>
-    public partial class InfoDialogView : UserControl
+    public partial class AliasView : UserControl
     {
-        public InfoDialogView()
+        public AliasView()
         {
             InitializeComponent();
         }

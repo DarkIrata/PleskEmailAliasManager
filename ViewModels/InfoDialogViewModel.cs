@@ -1,10 +1,16 @@
 ﻿using System;
-using Caliburn.Micro;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using IPUP.MVVM.Commands;
+using IPUP.MVVM.ViewModels;
 using MaterialDesignThemes.Wpf;
 
 namespace PleskEmailAliasManager.ViewModels
 {
-    public class InfoDialogViewModel : PropertyChangedBase
+    internal class InfoDialogViewModel : ViewModelBase
     {
         private PackIconKind icon;
 
@@ -14,24 +20,22 @@ namespace PleskEmailAliasManager.ViewModels
             set => this.Set(ref this.icon, value, nameof(this.Icon));
         }
 
-        private string text;
+        private string? text;
 
-        public string Text
+        public string? Text
         {
             get => this.text;
             set => this.Set(ref this.text, value, nameof(this.Text));
         }
 
-        public InfoDialogViewModel(PackIconKind icon, string text)
+        public ICommand OkCommand { get; }
+
+        public InfoDialogViewModel(string? text, PackIconKind icon = PackIconKind.InfoCircleOutline)
         {
             this.Icon = icon;
-            this.Text = text ??
-                    throw new ArgumentNullException(nameof(text));
-        }
+            this.Text = text;
 
-        public void Ok()
-        {
-            DialogHost.CloseDialogCommand.Execute(null, null);
+            this.OkCommand = new DelegateCommand(() => DialogHost.CloseDialogCommand.Execute(null, null));
         }
     }
 }

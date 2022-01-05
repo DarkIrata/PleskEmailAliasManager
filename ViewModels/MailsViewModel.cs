@@ -1,83 +1,118 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
-using System.Windows.Data;
-using Caliburn.Micro;
-using PleskEmailAliasManager.Models;
-using PleskEmailAliasManager.Models.PleskXMLApi;
+using System.Windows;
+using System.Windows.Input;
+using IPUP.MVVM.Commands;
+using IPUP.MVVM.Events;
+using Microsoft.Win32;
+using PleskEmailAliasManager.Data;
+using PleskEmailAliasManager.Events;
 using PleskEmailAliasManager.Services;
 
 namespace PleskEmailAliasManager.ViewModels
 {
-    public class MailsViewModel : PropertyChangedBase, IHandle<DomainData>
+    internal class MailsViewModel : PleskDataViewModel<MailData>
     {
-        private readonly IEventAggregator eventAggregator;
-        private readonly PleskXMLApiService pleskXMLApiService;
-        private readonly object mailsLock = new object();
+        private DomainData? selectedDomain;
 
-        public ObservableCollection<MailData> Mails { get; }
-
-        private MailData selectedMail;
-
-        public MailData SelectedMail
+        public DomainData? SelectedDomain
         {
-            get => this.selectedMail;
+            get => this.selectedDomain;
+            set => this.Set(ref this.selectedDomain, value, nameof(this.SelectedDomain));
+        }
 
-            set
+        private MailData? lastSelectedMailData = null;
+
+        public DelegateCommandBase ExportMailsCommand { get; }
+
+        public MailsViewModel(IEventAggregator eventAggregator, PleskMailManager provider)
+            : base(eventAggregator, provider)
+        {
+            this.ExportMailsCommand = new DelegateCommand(() => this.ExecuteExportMails(), () => this.SelectedDomain != null);
+
+            this.EventAggregator.Subscribe<SelectedDomainChangedEvent>(this.OnSelectedDomainChanged);
+            this.EventAggregator.Subscribe<RefreshAndReselectMailEvent>(this.OnRefreshAndReselectMailRequested);
+        }
+
+        private void ExecuteExportMails()
+        {
+            var sfd = new SaveFileDialog()
             {
-                this.eventAggregator.PublishOnBackgroundThread(value ?? new MailData(-1, string.Empty));
-                this.Set(ref this.selectedMail, value, nameof(this.SelectedMail));
+                FileName = $"{this.SelectedDomain!.Name}-Mails.json",
+                Title = "Export Mail Alias List",
+                Filter = "Json|*.json",
+            };
+
+            if (sfd.ShowDialog() == true)
+            {
+
+                var exportMailData = this.RawItems.Select(md => new ExportMailData(md.Name!, md.Aliases));
+                File.WriteAllText(sfd.FileName,
+                    JsonSerializer.Serialize(exportMailData, new JsonSerializerOptions()
+                    {
+                        WriteIndented = true,
+                    })
+                );
             }
         }
 
-        public MailsViewModel(IEventAggregator eventAggregator, PleskXMLApiService pleskXMLApiService)
+        private async void OnRefreshAndReselectMailRequested(RefreshAndReselectMailEvent args)
         {
-            this.eventAggregator = eventAggregator ??
-                    throw new ArgumentNullException(nameof(eventAggregator));
-
-            this.pleskXMLApiService = pleskXMLApiService ??
-                    throw new ArgumentNullException(nameof(pleskXMLApiService));
-
-            this.eventAggregator.Subscribe(this);
-            this.Mails = new ObservableCollection<MailData>();
-            BindingOperations.EnableCollectionSynchronization(this.Mails, this.mailsLock);
+            this.lastSelectedMailData = args.MailData;
+            await this.ReloadItems();
         }
 
-        public async Task LoadDataAsync(DomainData domainData)
+        internal override async Task OnItemsRefreshed()
         {
-            var packet = new Packet()
+            await base.OnItemsRefreshed();
+
+            if (this.lastSelectedMailData != null)
             {
-                Mail = Mail.CreateMinimumGet(domainData.Id)
-            };
-
-            packet.Mail.GetInfo.Aliases = new Aliases();
-
-            var response = await this.pleskXMLApiService.RequestAsync(packet).ConfigureAwait(false);
-
-            this.Mails.Clear();
-
-            if (response.ErrorResult.ErrorCode == Data.ErrorCode.Success &&
-                response.Packet.Mail != null &&
-                response.Packet.Mail.GetInfo != null)
-            {
-                foreach (var mailAddress in response.Packet.Mail.GetInfo.Result)
+                var item = this.Items.FirstOrDefault(md => md.Id == this.lastSelectedMailData.Id && md.Name == this.lastSelectedMailData.Name);
+                if (item != null)
                 {
-                    if (mailAddress.MailName == null)
-                    {
-                        continue;
-                    }
-
-                    this.Mails.Add(new MailData((int)mailAddress.MailName.Id, mailAddress.MailName.Name, mailAddress.MailName.Aliases, domainData));
+                    this.SelectedItem = item;
                 }
             }
         }
 
-        public async void Handle(DomainData message)
+        private async void OnSelectedDomainChanged(SelectedDomainChangedEvent args)
         {
-            await this.LoadDataAsync(message);
+            this.SelectedDomain = args.DomainData;
+            await this.ReloadItems();
+            await this.RefreshControls();
+
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                this.ExportMailsCommand.RaiseCanExecuteChanged();
+            });
+
+            this.SelectedItem = null;
+        }
+
+        public override void OnSelectedItemChanged()
+        {
+            base.OnSelectedItemChanged();
+            this.EventAggregator.Publish(new SelectedMailChangedEvent(this.SelectedItem));
+        }
+
+        internal override bool CanExecuteFlipSort() => true;
+
+        internal override bool CanExecuteReload() => this.SelectedDomain != null;
+
+        internal override async Task<(ErrorResult Result, List<MailData> Items)> RequestItems()
+        {
+            if (this.SelectedDomain == null)
+            {
+                return (ErrorResult.Success, new List<MailData>());
+            }
+
+            return await this.Provider.GetMailsAsync(this.SelectedDomain!);
         }
     }
 }
