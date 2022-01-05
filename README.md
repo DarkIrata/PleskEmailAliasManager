@@ -1,7 +1,19 @@
 # Plesk Email Alias Manager
 This tool is a product of a quick solution to create mail alias accounts for e-mail addresses hosted with PLESK using the XML API.
-Also i wanted to play around with the (MaterialDesignInXAML)[https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit]
-Feel free to use it how you like.
+The tool is providing minimum support and only handles the alias use case.
+With Version 2 i rewrote everything in .net 6 and cleaned it up so it can, if needed, be adjusted / extendet easily.
 
-# Screenshot
+Feel free to use / adjust as needed.
+### Planned Features
+All this features are really low priority
+* Add Favorites
+* Create / Delete Mails
+
+
+## Screenshot
 ![](Images/Main.png)
+
+## Used Dependencies
+[MaterialDesignInXAML](https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit) - UI Theme
+
+IPUP.MVVM - Custom MVVM Library. Absolute Basic and can be replaced if needed.
