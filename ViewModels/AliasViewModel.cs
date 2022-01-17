@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using IPUP.MVVM.Commands;
 using IPUP.MVVM.Events;
 using IPUP.MVVM.ViewModels;
 using MaterialDesignThemes.Wpf;
 using PleskEmailAliasManager.Data;
-using PleskEmailAliasManager.Data.PleskXmlApi;
 using PleskEmailAliasManager.Events;
 using PleskEmailAliasManager.Services;
 
@@ -23,7 +21,6 @@ namespace PleskEmailAliasManager.ViewModels
         public string Alias { get; }
 
         private bool showDeleteConfirm = false;
-        private bool canInteract = true;
 
         public bool ShowDeleteConfirm
         {
@@ -31,7 +28,20 @@ namespace PleskEmailAliasManager.ViewModels
             set => this.Set(ref this.showDeleteConfirm, value, nameof(this.ShowDeleteConfirm));
         }
 
+        private bool showCopyChecked;
+
+        public bool ShowCopyChecked
+        {
+            get => this.showCopyChecked;
+            set => this.Set(ref this.showCopyChecked, value, nameof(this.ShowCopyChecked));
+        }
+
+        private bool canInteract = true;
+        private CancellationTokenSource copyCheckCancellationTokenSource;
+
         public ICommand ShowDeleteConfirmCommand { get; }
+
+        public ICommand CopyAliasAddressCommand { get; }
 
         public DelegateCommandBase AbortDeletionCommand { get; }
 
@@ -45,8 +55,41 @@ namespace PleskEmailAliasManager.ViewModels
             this.Alias = alias;
 
             this.ShowDeleteConfirmCommand = new DelegateCommand(() => this.ShowDeleteConfirm = true);
+            this.CopyAliasAddressCommand = new DelegateCommand(() => this.ExecuteCopyAliasAddress(), () => this.mailData?.DomainData != null);
             this.AbortDeletionCommand = new DelegateCommand(() => this.ShowDeleteConfirm = false, () => this.canInteract);
             this.ConfirmDeletionCommand = new DelegateCommand(async () => await this.ExecuteDeleteCommand(), () => this.canInteract);
+        }
+
+        private void ExecuteCopyAliasAddress()
+        {
+            try
+            {
+                if (!this.copyCheckCancellationTokenSource?.IsCancellationRequested ?? false)
+                {
+                    this.copyCheckCancellationTokenSource!.Cancel();
+                }
+
+                this.copyCheckCancellationTokenSource = new CancellationTokenSource();
+
+                Clipboard.SetText($"{this.Alias}@{this.mailData?.DomainData?.Name}");
+                this.ShowCopyChecked = true;
+
+                var token = this.copyCheckCancellationTokenSource!.Token;
+                Task.Run(async () =>
+                {
+                    await Task.Delay(1200);
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    Application.Current.Dispatcher.Invoke(() => this.ShowCopyChecked = false);
+                }, token);
+            }
+            catch
+            {
+                // Todo: Maybe add Logging?
+            }
         }
 
         private async Task ExecuteDeleteCommand()
