@@ -36,6 +36,7 @@
             Background="Transparent"
             BorderBrush="Transparent"
             Command="{Binding CopyAliasAddressCommand}"
+            ToolTip="Copy alias to clipboard"
             Visibility="{Binding ShowDeleteConfirm, Converter={StaticResource InvertableBooleanToVisibilityConverter}}">
             <Button.Style>
                 <Style BasedOn="{StaticResource {x:Type Button}}" TargetType="{x:Type Button}">
@@ -48,8 +49,8 @@
                 </Style>
             </Button.Style>
             <StackPanel Orientation="Horizontal">
-                <materialDesign:PackIcon Kind="ContentCopy" Visibility="{Binding ShowCopyChecked, Converter={StaticResource InvertableBooleanToVisibilityConverter}}"/>
-                <materialDesign:PackIcon Kind="Check" Visibility="{Binding ShowCopyChecked, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <materialDesign:PackIcon Kind="ContentCopy" Visibility="{Binding ShowCopyChecked, Converter={StaticResource InvertableBooleanToVisibilityConverter}}" />
+                <materialDesign:PackIcon Kind="Check" Visibility="{Binding ShowCopyChecked, Converter={StaticResource BooleanToVisibilityConverter}}" />
             </StackPanel>
         </Button>
 
@@ -64,6 +65,7 @@
             Background="Transparent"
             BorderBrush="Transparent"
             Command="{Binding ShowDeleteConfirmCommand}"
+            ToolTip="Delete Alias"
             Visibility="{Binding ShowDeleteConfirm, Converter={StaticResource InvertableBooleanToVisibilityConverter}}">
             <Button.Style>
                 <Style BasedOn="{StaticResource {x:Type Button}}" TargetType="{x:Type Button}">
