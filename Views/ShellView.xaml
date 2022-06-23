@@ -7,6 +7,7 @@
     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vms="clr-namespace:PleskEmailAliasManager.ViewModels"
+    Title="{Binding Title}"
     Width="1000"
     Height="550"
     MinWidth="700"
@@ -21,21 +22,36 @@
     TextElement.Foreground="{DynamicResource MaterialDesignBody}"
     TextOptions.TextFormattingMode="Ideal"
     TextOptions.TextRenderingMode="Auto"
-    Title="{Binding Title}"
     mc:Ignorable="d">
 
     <Window.Resources>
         <DataTemplate DataType="{x:Type vms:InfoDialogViewModel}">
             <local:InfoDialogView />
         </DataTemplate>
-    </Window.Resources>    
+        <DataTemplate DataType="{x:Type vms:ConfirmDialogViewModel}">
+            <local:ConfirmDialogView />
+        </DataTemplate>
+    </Window.Resources>
 
     <materialDesign:DialogHost Identifier="{Binding RootDialogIdentifier}">
         <Grid>
             <ContentControl Content="{Binding ActiveViewModel}">
                 <ContentControl.Resources>
                     <DataTemplate DataType="{x:Type vms:LoginViewModel}">
-                        <local:LoginView />
+                        <Grid>
+                            <local:LoginView />
+                            <Button
+                                Width="180"
+                                Height="75"
+                                Margin="5"
+                                Padding="0"
+                                Command="{Binding GooglePlayCommand}"
+                                Style="{DynamicResource MaterialDesignToolButton}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom">
+                                <Image Source="pack://application:,,,/Resources/googleplay.png" />
+                            </Button>
+                        </Grid>
                     </DataTemplate>
                     <DataTemplate DataType="{x:Type vms:AddressViewModel}">
                         <local:AddressView />

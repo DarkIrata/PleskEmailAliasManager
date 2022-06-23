@@ -1,15 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using IPUP.MVVM.Commands;
 using IPUP.MVVM.ViewModels;
+using MaterialDesignThemes.Wpf;
 using PleskEmailAliasManager.Data;
+using PleskEmailAliasManager.Enums;
 using PleskEmailAliasManager.Services;
 
 namespace PleskEmailAliasManager.ViewModels
@@ -121,6 +121,12 @@ namespace PleskEmailAliasManager.ViewModels
 #pragma warning restore CS8603 // Possible null reference return.
             }
         }
+
+        public ICommand GooglePlayCommand { get; } = new DelegateCommand(() => Process.Start((new ProcessStartInfo
+        {
+            FileName = "https://play.google.com/store/apps/details?id=de.irataprojects.pleskemailaliasmanager",
+            UseShellExecute = true
+        })));
 
         public LoginViewModel()
         {

@@ -18,7 +18,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Resources\googleplay.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="plesk.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\googleplay.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,7 +42,6 @@
 
   <ItemGroup>
     <Folder Include="Data\PleskXmlApi\" />
-    <Folder Include="NewFolder\" />
   </ItemGroup>
 
 </Project>
