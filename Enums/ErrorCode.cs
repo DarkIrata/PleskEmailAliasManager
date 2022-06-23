@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace PleskEmailAliasManager.Enums
+﻿namespace PleskEmailAliasManager.Enums
 {
     internal enum ErrorCode
     {
         Success = 0,
 
         ExternalError = 100,
+        SSLException = 110,
         InternalError = 200,
         RemoteClosedConnection = 201,
 

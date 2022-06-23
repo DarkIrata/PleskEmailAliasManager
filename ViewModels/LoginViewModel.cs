@@ -141,19 +141,66 @@ namespace PleskEmailAliasManager.ViewModels
             this.LoginCommand = new DelegateCommand(() => this.ExecuteLogin(), () => this.CanExecuteLogin());
         }
 
-        public bool CanExecuteLogin() => !string.IsNullOrEmpty(this.Host) && 
-            !string.IsNullOrEmpty(this.Username) && 
+        public bool CanExecuteLogin() => !string.IsNullOrEmpty(this.Host) &&
+            !string.IsNullOrEmpty(this.Username) &&
             !string.IsNullOrEmpty(this.Password) &&
             !this.IsWorking;
 
+        private async Task<PleskMailManager?> GetProvider(bool ignoreCertificates = false)
+        {
+            var provider = new PleskMailManager(new PleskXMLApiService(this.loginDetails, ignoreCertificates));
+            this.IsWorking = true;
+
+            try
+            {
+                this.ErrorText = string.Empty;
+                var result = await provider.CheckAuthorization();
+                if (!result.Successfully)
+                {
+                    if (result.ErrorCode == ErrorCode.SSLException)
+                    {
+                        var dialogResult = await DialogHost.Show(new ConfirmDialogViewModel("SSL Error", "The SSL certificate is invalid / outdated. Do you want to ignore it and continue?", "Yes", "No", PackIconKind.ErrorOutline), ShellViewModel.RootDialogIdentifier);
+                        if (dialogResult is bool confirmResult)
+                        {
+                            if (confirmResult)
+                            {
+                                return await this.GetProvider(true);
+                            }
+                            else
+                            {
+                                this.ErrorText = $"Invalid SSL certificate #{result.ErrorCode}";
+                            }
+                        }
+                    }
+                    else
+                    {
+                        this.ErrorText = $"{result.Message} #{result.ErrorCode}";
+                    }
+
+                    return null;
+                }
+
+                return provider;
+            }
+            finally
+            {
+                this.IsWorking = false;
+            }
+        }
+
         private async void ExecuteLogin()
         {
-            var provider = new PleskMailManager(new PleskXMLApiService(this.loginDetails));
+            var provider = await this.GetProvider(false);
+            if (provider == null)
+            {
+                return;
+            }
+
             this.IsWorking = true;
 
             var result = await provider.CheckAuthorization();
 
-            this.ErrorText = String.Empty;
+            this.ErrorText = string.Empty;
             if (!result.Successfully)
             {
                 this.ErrorText = result.Message ?? string.Empty;
@@ -180,7 +227,7 @@ namespace PleskEmailAliasManager.ViewModels
 
             if (this.SaveLogin)
             {
-                File.WriteAllText(LoginDataFileName, 
+                File.WriteAllText(LoginDataFileName,
                     JsonSerializer.Serialize(this.loginDetails, new JsonSerializerOptions()
                     {
                         WriteIndented = true,

@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
+using System.Security.Authentication;
 using System.Threading.Tasks;
-using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Serialization;
 using PleskEmailAliasManager.Data;
@@ -14,7 +12,7 @@ using PleskEmailAliasManager.Enums;
 
 namespace PleskEmailAliasManager.Services
 {
-    internal class PleskXMLApiService
+    internal class PleskXMLApiService : IDisposable
     {
         private const string AgentUrl = "/enterprise/control/agent.php";
 
@@ -25,11 +23,11 @@ namespace PleskEmailAliasManager.Services
 
         private string ApiUrl => (this.loginDetails?.Host ?? string.Empty) + AgentUrl;
 
-        public PleskXMLApiService(LoginDetails loginDetails)
+        public PleskXMLApiService(LoginDetails loginDetails, bool ignoreCertificates = false)
         {
             this.loginDetails = loginDetails;
 
-            this.httpClient = new HttpClient();
+            this.httpClient = this.GetClient(ignoreCertificates);
             this.httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/xml"));
             this.httpClient.DefaultRequestHeaders.Add("HTTP_AUTH_LOGIN", this.loginDetails.Username);
             this.httpClient.DefaultRequestHeaders.Add("HTTP_AUTH_PASSWD", this.loginDetails.Password);
@@ -41,6 +39,21 @@ namespace PleskEmailAliasManager.Services
             var resultType = typeof(Result);
             this.resultErrorCodeXmlName = this.GetXmlElementAttributeNameFromProperty(resultType, nameof(Result.ErrorCode));
             this.resultErrorTextXmlName = this.GetXmlElementAttributeNameFromProperty(resultType, nameof(Result.ErrorText));
+        }
+
+        private HttpClient GetClient(bool ignoreCertificates = false)
+        {
+            if (ignoreCertificates)
+            {
+                // This shouldn't be used...please inform the user accordingly
+                var handler = new HttpClientHandler();
+                handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+                handler.ServerCertificateCustomValidationCallback = (_, __, ___, ____) => true;
+
+                return new HttpClient(handler);
+            }
+
+            return new HttpClient();
         }
 
         private string GetXmlElementAttributeNameFromProperty(Type type, string propertyName)
@@ -98,10 +111,31 @@ namespace PleskEmailAliasManager.Services
 
                 return (ErrorResult.Success, result);
             }
+            catch (AuthenticationException authException)
+            {
+                return this.HandleSSLAuthenticationException(authException);
+            }
             catch (Exception ex)
             {
+                if (ex.GetType().FullName == "Javax.Net.Ssl.SSLHandshakeException" ||
+                    (ex.Message.Contains("The SSL connection could") && ex.InnerException?.GetType().FullName == "System.Security.Authentication.AuthenticationException") ||
+                    ex.Message.Contains("Chain validation failed"))
+                {
+                    return this.HandleSSLAuthenticationException(ex);
+                }
+
                 return (new ErrorResult(ErrorCode.InternalError, ex), null);
             }
+        }
+
+        private (ErrorResult ErrorResult, Packet? Packet) HandleSSLAuthenticationException(Exception ex)
+        {
+            return (new ErrorResult(ErrorCode.SSLException, ex), null);
+        }
+
+        public void Dispose()
+        {
+            this.httpClient?.Dispose();
         }
     }
 }
