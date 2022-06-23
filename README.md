@@ -9,9 +9,11 @@ All this features are really low priority
 * Add Favorites
 * Create / Delete Mails
 
-
 ## Screenshot
 ![](Images/Main.png)
+
+## Other
+ <a href="https://play.google.com/store/apps/details?id=de.irataprojects.pleskemailaliasmanager"><img src="Resources/googleplay.png" width="180"></a>
 
 ## Used Dependencies
 [MaterialDesignInXAML](https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit) - UI Theme
